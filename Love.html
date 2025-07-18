@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love You Forever</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B8B',
+                        secondary: '#FFB6C1',
+                        accent: '#FF85A1',
+                    },
+                    fontFamily: {
+                        romantic: ['"Dancing Script"', 'cursive', 'sans-serif'],
+                        main: ['"Inter"', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 2px 10px rgba(255, 107, 139, 0.3);
+            }
+            .bg-gradient-love {
+                background: linear-gradient(135deg, #FFF5F7 0%, #FFEFF2 100%);
+            }
+            .animate-float {
+                animation: float 6s ease-in-out infinite;
+            }
+            @keyframes float {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-15px); }
+                100% { transform: translateY(0px); }
+            }
+        }
+    </style>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gradient-love font-main text-gray-800 overflow-x-hidden">
+    <!-- 页面标题 -->
+    <header class="relative w-full py-12 text-center z-10">
+        <h1 class="text-[clamp(2.5rem,8vw,4.5rem)] font-romantic font-bold text-primary animate-float text-shadow">
+            Love You Forever
+        </h1>
+        <p class="mt-4 text-[clamp(1.2rem,4vw,1.8rem)] font-romantic text-accent">
+            莺莺衔来夏天    爱意长成诗篇❤
+        </p>
+    </header>
+
+    <!-- 3D爱心容器 -->
+    <div class="relative w-full max-w-3xl mx-auto aspect-square max-h-[80vh] mb-12">
+        <div id="heart-container" class="w-full h-full rounded-2xl shadow-2xl shadow-primary/10"></div>
+        
+        <!-- 交互提示 -->
+        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full text-sm shadow-md z-10">
+            <i class="fa fa-hand-pointer-o mr-2 text-primary"></i>
+            <span>拖动可旋转爱心，滚轮缩放</span>
+        </div>
+    </div>
+
+    <!-- 信息卡片 -->
+    <div class="max-w-2xl mx-auto bg-white/70 backdrop-blur-md rounded-2xl p-6 md:p-8 shadow-xl mb-16 border border-white/30">
+        <div class="flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <i class="fa fa-heart text-3xl text-primary"></i>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-romantic font-bold text-primary mb-3">黄莺</h2>
+            <p class="text-gray-600 max-w-md">
+                这颗爱心由特别的名字组成，每一个字符都承载着温暖与爱意。
+                旋转它，从不同角度感受这份独特的心意。
+            </p>
+            
+            <div class="mt-6 flex gap-4">
+                <button id="reset-view" class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-all flex items-center">
+                    <i class="fa fa-refresh mr-2"></i>重置视角
+                </button>
+                <button id="save-image" class="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-full transition-all flex items-center">
+                    <i class="fa fa-download mr-2"></i>保存图片
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="py-6 text-center text-gray-500 text-sm">
+        <p>用爱编织的3D爱心 &copy; 2023</p>
+    </footer>
+
+    <script>
+        // 等待页面加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            // 创建3D场景
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+            
+            // 创建相机
+            const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+            camera.position.z = 50;
+            
+            // 创建渲染器
+            const container = document.getElementById('heart-container');
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+            
+            // 添加环境光
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            
+            // 添加方向光
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(10, 20, 30);
+            scene.add(directionalLight);
+            
+            // 创建名字组成的爱心
+            const name = "黄莺";
+            const allNames = [name];
+            
+            // 爱心参数设置
+            const heartPoints = [];
+            const pointCount = 100; // 点数量
+            
+            // 生成爱心形状的点
+            for (let i = 0; i < pointCount; i++) {
+                const t = Math.PI * i / (pointCount / 2);
+                
+                // 爱心参数方程
+                let x = 16 * Math.pow(Math.sin(t), 3);
+                let y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                
+                // 添加随机深度，形成3D效果
+                const z = (Math.random() - 0.5) * 8;
+                
+                // 缩放爱心大小
+                x *= 1.2;
+                y *= 1.2;
+                
+                heartPoints.push({ x, y, z });
+            }
+            
+            // 创建文字精灵
+            const createTextSprite = (text, color) => {
+                // 创建canvas用于文字
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 128;
+                canvas.height = 64;
+                
+                // 设置文字样式
+                context.font = 'bold 40px "Dancing Script", cursive';
+                context.fillStyle = color;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(text, canvas.width / 2, canvas.height / 2);
+                
+                // 创建纹理
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                
+                // 设置大小
+                sprite.scale.set(8, 4, 1);
+                
+                return sprite;
+            };
+            
+            // 创建爱心点并添加到场景
+            heartPoints.forEach((point, index) => {
+                // 循环使用名字
+                const text = allNames[index % allNames.length];
+                
+                // 随机粉色系颜色
+                const hue = 340 + Math.random() * 20; // 粉色到红色范围
+                const saturation = 70 + Math.random() * 20;
+                const lightness = 50 + Math.random() * 10;
+                const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                
+                // 创建文字精灵
+                const sprite = createTextSprite(text, color);
+                
+                // 设置位置
+                sprite.position.set(point.x, point.y, point.z);
+                
+                // 添加到场景
+                scene.add(sprite);
+            });
+            
+            // 添加轨道控制器，支持交互
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+            controls.rotateSpeed = 0.5;
+            controls.zoomSpeed = 0.7;
+            
+            // 重置视角按钮
+            document.getElementById('reset-view').addEventListener('click', () => {
+                camera.position.set(0, 0, 50);
+                controls.reset();
+            });
+            
+            // 保存图片功能
+            document.getElementById('save-image').addEventListener('click', () => {
+                // 创建临时链接下载图片
+                const link = document.createElement('a');
+                link.download = '黄莺爱心.png';
+                link.href = renderer.domElement.toDataURL('image/png');
+                link.click();
+            });
+            
+            // 窗口大小调整时重新渲染
+            window.addEventListener('resize', () => {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                renderer.setSize(width, height);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            });
+            
+            // 动画循环
+            const animate = () => {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            };
+            
+            // 开始动画
+            animate();
+        });
+    </script>
+</body>
+</html>
